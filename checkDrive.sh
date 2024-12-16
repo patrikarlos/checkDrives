@@ -69,6 +69,7 @@ for arg; do
     UserCapacity=$(echo "$UserCapacity" | sed 's/,//g')
     FirmWare=$(echo "$FirmWare" | sed 's/ //g');
     SerNum=$(echo "$SerNum" | sed 's/ //g');
+    Power_on_Hours=$(echo "$Power_on_Hours" | sed 's/,//g');
 
     RemainingPercent=$(echo "$RemainingPercent" | sed 's/\%//g');
     
@@ -78,14 +79,16 @@ for arg; do
     
     HOSTNAME=$(hostname)
     timestamp=$(date +%s)
+
+    echo "string=|storage,host=$HOSTNAME,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
+    
     curl --request POST \
-	 "$INFURL/api/v2/write?org=main-org&bucket=bucket01&precision=s" \
+	 "$INFURL/api/v2/write?org=main-org&bucket=storage&precision=s" \
 	 --header "Authorization: Token $TOKENSTRING" \
 	 --header "Content-Type: text/plain; charset=utf-8" \
 	 --header "Accept: application/json" \
-	 --data-binary "storage,rack_id=test1 host=\"$HOSTNAME\",Device=\"$arg\",Model=\"$DevModel\",Serial=\"$SerNum\",Firmware=\"$FirmWare\",Capacity=\"$UserCapacity\",PowerOn=\"$Power_on_Hours\",Remain=\"$RemainingPercent\" $timestamp"
-
-#    echo ""
+    	 --data-binary "storage,host=$HOSTNAME,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
+    echo ""
 done
     
 
