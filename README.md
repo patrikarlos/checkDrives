@@ -10,3 +10,7 @@ to an InfluxDB, for futher processing.
 (*) Sadly, there is not a standard for the devices. So, adaptations have to be made
 to suit the drives in question (hence the public Gitrepo).
 
+Example for Crontab running daily at 0600.
+
+0 6 * * * <fullpath>/checkDrives/checkDrive.sh <url> <token> <id> dev1 dev2 ... devN
+
