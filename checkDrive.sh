@@ -42,20 +42,43 @@ for arg; do
     if [[ $VERBOSE -gt 1 ]]; then
 	echo "---$arg---"
     fi
-    if [[ "$arg" == *"megaraid"* ]]; then 
-	data=$(sudo smartctl -a -d "$arg")
+    DEVICE=$arg
+    DEVTYPE=""
+    
+    if [[ "$arg" == *","* ]]; then
+	if [[ $VERBOSE -ge 1 ]]; then
+	    echo "Non-std"
+	fi
+	DEVICE=$(echo "$arg" | awk -F',' '{print $2}')
+	DEVTYPE=$(echo "$arg" | awk -F',' '{print $1}')
+	data=$(sudo smartctl -a -d "$DEVTYPE" "$DEVICE")
     else
+	if [[ $VERBOSE -ge 1 ]]; then
+	    echo "std"
+	fi
 	data=$(sudo smartctl -a "$arg")
     fi
 
+    if [[ $VERBOSE -ge 1 ]]; then
+	echo "DEV: $DEVICE "
+	echo "TYPE: $DEVTYPE "
+    fi
+    
+    
+   
     ff=$(echo "$data" | grep 'Form Factor' | grep 'inches' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
     rr=$(echo "$data" | grep 'Rotation Rate' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
-
-    if [[ "$rr" == *"rpm" && $VERBOSE ]]; then
+    
+    if [[ "$rr" == *"rpm" && $VERBOSE -eq 1 ]]; then
 	echo "Spinning rust, not interesting"
 	continue;
     fi
-   
+
+    if [[ $VERBOSE -ge 1 ]]; then
+	echo "ff: $ff"
+	echo "rr: $rr"
+    fi
+    
     
     DevModel=$(echo "$data" | grep -E 'Device Model:|Model Number:' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
     SerNum=$(echo "$data" | grep 'Serial Number:' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
@@ -87,16 +110,23 @@ for arg; do
 
     RemainingPercent=$(echo "$RemainingPercent" | sed 's/\%//g');
 
-    if [[ $VERBOSE -eq 1 ]]; then
-	echo $(date --rfc-3339='ns')"|"$(hostname)"|$arg|$DevModel|$SerNum|$FirmWare|$UserCapacity|$Power_on_Hours|$RemainingPercent|"
+    if [[ $VERBOSE -ge 1 ]]; then
+	echo $(date --rfc-3339='ns')"|"$(hostname)"|$DEVICE|$DevModel|$SerNum|$FirmWare|$UserCapacity|$Power_on_Hours|$RemainingPercent|"
     fi
 
+    if [[ -z $DevModel ]]; then
+	echo "Problems with $DEVICE, did you get the right type?"
+	echo "Does not report this device."
+	continue;
+    fi
+	
+    
     
     HOSTNAME=$(hostname)
     timestamp=$(date +%s)
 
-    if [[ $VERBOSE -eq 1 ]]; then
-	echo "string=|storage,host=$IDTAG,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
+    if [[ $VERBOSE -ge 1 ]]; then
+	echo "string=|storage,host=$IDTAG,Device=$DEVICE,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
     fi
     
     response=$(curl -s -w "%{http_code}" --request POST \
@@ -104,12 +134,12 @@ for arg; do
 	 --header "Authorization: Token $TOKENSTRING" \
 	 --header "Content-Type: text/plain; charset=utf-8" \
 	 --header "Accept: application/json" \
-    	 --data-binary "storage,host=$IDTAG,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
+    	 --data-binary "storage,host=$IDTAG,Device=$DEVICE,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
 	       )
     exit_status=$?
     http_code=$(tail -n1 <<< "$response")
 
-    if [[ $VERBOSE -eq 1 ]]; then
+    if [[ $VERBOSE -ge 1 ]]; then
 	echo "hc=|$http_code|"
     fi
     
@@ -128,7 +158,7 @@ for arg; do
     
 done
 
-if [[ $VERBOSE -eq 1 ]]; then
+if [[ $VERBOSE -ge 1 ]]; then
     echo "Successfully sent $SUCCESSCNT devices."
 fi
 
