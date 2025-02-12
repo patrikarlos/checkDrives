@@ -105,13 +105,19 @@ for arg; do
     if [[ -z "$Power_on_Hours" ]]; then
 	Power_on_Hours="NA"
     fi
+
+    if [[ "$DevModel" == *"_DELLBOSS_" ]]; then
+	echo "DELL BOSS does not support SMART."
+	continue;
+    fi
+
     
     if [[ "$DevModel" == *"KINGSTON SEDC600M1920G"* ]]; then
 	RemainingPercent=$(echo "$data" | grep "^231" | awk '{print $NF}');
     elif [[ "$DevModel" == *"INTEL SSDPEKNW010T8"* ]]; then
 	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');
     elif [[ "$DevModel" == *"Samsung SSD 980 PRO"* ]]; then
-	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');
+	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');	
     else
 	echo "Unknown model"
 	RemainingPercent="00"
