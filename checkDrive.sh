@@ -49,8 +49,8 @@ for arg; do
 	if [[ $VERBOSE -ge 1 ]]; then
 	    echo "Non-std"
 	fi
-	DEVICE=$(echo "$arg" | awk -F',' '{print $2}')
-	DEVTYPE=$(echo "$arg" | awk -F',' '{print $1}')
+	DEVICE=$(echo "$arg" | rev | cut -d',' -f1 | rev)
+	DEVTYPE=$(echo "$arg" | rev | cut -d',' -f2- | rev)
 	data=$(sudo smartctl -a -d "$DEVTYPE" "$DEVICE")
     else
 	if [[ $VERBOSE -ge 1 ]]; then
