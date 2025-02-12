@@ -15,7 +15,9 @@
 ##
 ##
 
+## Override LC_NUMERIC; force to C (consider changing to -j on smartctl)
 
+LC_NUMERIC="C"
 
 INFURL=$1
 TOKENSTRING=$2
