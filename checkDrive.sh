@@ -119,7 +119,7 @@ for arg; do
     elif [[ "$DevModel" == *"Samsung SSD 980 PRO"* ]]; then
 	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');	
     else
-	echo "Unknown model"
+	echo "Unknown model, $DevModel"
 	RemainingPercent="00"
     fi
 
