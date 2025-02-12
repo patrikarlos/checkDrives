@@ -96,7 +96,7 @@ for arg; do
     timestamp=$(date +%s)
 
     if [[ $VERBOSE -eq 1 ]]; then
-	echo "string=|storage,host=$HOSTNAME,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
+	echo "string=|storage,host=$IDTAG,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
     fi
     
     response=$(curl -s -w "%{http_code}" --request POST \
@@ -104,7 +104,7 @@ for arg; do
 	 --header "Authorization: Token $TOKENSTRING" \
 	 --header "Content-Type: text/plain; charset=utf-8" \
 	 --header "Accept: application/json" \
-    	 --data-binary "storage,host=$HOSTNAME,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
+    	 --data-binary "storage,host=$IDTAG,Device=$arg,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
 	       )
     exit_status=$?
     http_code=$(tail -n1 <<< "$response")
