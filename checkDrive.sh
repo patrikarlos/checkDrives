@@ -52,6 +52,7 @@ for arg; do
 	DEVICE=$(echo "$arg" | rev | cut -d',' -f1 | rev)
 	DEVTYPE=$(echo "$arg" | rev | cut -d',' -f2- | rev)
 	data=$(sudo smartctl -a -d "$DEVTYPE" "$DEVICE")
+	DEVICESTRING=$(echo "${DEVICE}_$DEVTYPE" | tr ',' '_')
     else
 	if [[ $VERBOSE -ge 1 ]]; then
 	    echo "std"
@@ -60,7 +61,7 @@ for arg; do
     fi
 
     if [[ $VERBOSE -ge 1 ]]; then
-	echo "DEV: $DEVICE "
+	echo "DEV: $DEVICESTRING "
 	echo "TYPE: $DEVTYPE "
     fi
 
@@ -132,7 +133,7 @@ for arg; do
     RemainingPercent=$(echo "$RemainingPercent" | sed 's/\%//g');
 
     if [[ $VERBOSE -ge 1 ]]; then
-	echo $(date --rfc-3339='ns')"|"$(hostname)"|$DEVICE|$DevModel|$SerNum|$FirmWare|$UserCapacity|$Power_on_Hours|$RemainingPercent|"
+	echo $(date --rfc-3339='ns')"|"$(hostname)"|$DEVICESTRING|$DevModel|$SerNum|$FirmWare|$UserCapacity|$Power_on_Hours|$RemainingPercent|"
     fi
 
     if [[ -z $DevModel ]]; then
@@ -147,7 +148,7 @@ for arg; do
     timestamp=$(date +%s)
 
     if [[ $VERBOSE -ge 1 ]]; then
-	echo "string=|storage,host=$IDTAG,Device=$DEVICE,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
+	echo "string=|storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp|"
     fi
     
     response=$(curl -s -w "%{http_code}" --request POST \
@@ -155,7 +156,7 @@ for arg; do
 	 --header "Authorization: Token $TOKENSTRING" \
 	 --header "Content-Type: text/plain; charset=utf-8" \
 	 --header "Accept: application/json" \
-    	 --data-binary "storage,host=$IDTAG,Device=$DEVICE,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
+    	 --data-binary "storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel,Serial=$SerNum,Firmware=$FirmWare,Capacity=$UserCapacity PowerOn=$Power_on_Hours,Remain=$RemainingPercent $timestamp"
 	       )
     exit_status=$?
     http_code=$(tail -n1 <<< "$response")
