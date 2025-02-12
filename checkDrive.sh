@@ -63,21 +63,36 @@ for arg; do
 	echo "DEV: $DEVICE "
 	echo "TYPE: $DEVTYPE "
     fi
+
+#    SMART support is:     Unavailable - device lacks SMART capability.
+    smart=$(echo "$data" | grep -i 'SMART support')
+
+    if [[ ! -z "$smart" ]]; then
+	## There was a statement about smart support.
+	supported=$(echo "$smart" | grep -i "Unavailible|Missing")
+	if [[ ! -z "$supported" ]]; then
+	    echo "This device explicitly does _not_ support SMART."
+	    continue;
+	fi
+    fi
+    
     
     
    
     ff=$(echo "$data" | grep 'Form Factor' | grep 'inches' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
     rr=$(echo "$data" | grep 'Rotation Rate' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
-    
-    if [[ "$rr" == *"rpm" && $VERBOSE -eq 1 ]]; then
-	echo "Spinning rust, not interesting"
-	continue;
-    fi
 
     if [[ $VERBOSE -ge 1 ]]; then
 	echo "ff: $ff"
 	echo "rr: $rr"
     fi
+    
+    if [[ "$rr" == *"rpm"* ]]; then
+	echo "$DEVICE is a HDD, not interesting"
+	continue;
+    fi
+
+
     
     
     DevModel=$(echo "$data" | grep -E 'Device Model:|Model Number:' | awk -F':' '{print $2}' | sed 's/ \{2,\}/ /g' )
@@ -99,7 +114,7 @@ for arg; do
 	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');
     else
 	echo "Unknown model"
-	RemainingPercent="NA"
+	RemainingPercent="00"
     fi
 
     DevModel=$(echo "$DevModel" | sed 's/ /_/g');
