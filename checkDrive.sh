@@ -24,7 +24,7 @@ TOKENSTRING=$2
 IDTAG=$3
 
 ## SEt to 1 if to print debugging.
-VERBOSE=0
+VERBOSE=1
 
 shift 3
 
@@ -58,6 +58,7 @@ for arg; do
 	    echo "std"
 	fi
 	data=$(sudo smartctl -a "$arg")
+	DEVICESTRING=$(echo "${DEVICE}")
     fi
 
     if [[ $VERBOSE -ge 1 ]]; then
