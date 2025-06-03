@@ -105,7 +105,7 @@ for arg; do
     Power_on_Hours=$(echo "$data" |  grep -E 'Power_On_Hours|Power On Hours' | awk '{print $NF}' | sed 's/ \{2,\}/ /g' )
 		     
     if [[ -z "$Power_on_Hours" ]]; then
-	Power_on_Hours="NA"
+	Power_on_Hours="00"
     fi
 
     if [[ "$DevModel" == *"_DELLBOSS_" ]]; then
