@@ -141,6 +141,10 @@ for arg; do
 
     RemainingPercent=$(echo "$RemainingPercent" | sed 's/\%//g');
 
+    if [[ -z "$RemainingPercent" ]]; then
+	RemainingPercent="00"
+    fi
+    
     if [[ $VERBOSE -ge 1 ]]; then
 	echo $(date --rfc-3339='ns')"|"$(hostname)"|$DEVICESTRING|$DevModel|$SerNum|$FirmWare|$UserCapacity|$Power_on_Hours|$RemainingPercent|"
     fi
