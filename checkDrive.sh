@@ -38,6 +38,8 @@ fi
 
 SUCCESSCNT=0;
 
+## Evaluate if smartctl -a or -x is to be used. 
+
 for arg; do
     if [[ $VERBOSE -gt 1 ]]; then
 	echo "---$arg---"
@@ -63,7 +65,7 @@ for arg; do
 
     if [[ $VERBOSE -ge 1 ]]; then
 	echo "DEV: $DEVICESTRING "
-	echo "TYPE: $DEVTYPE "
+	echo "TYPE: $DEVTYPE "d
     fi
 
 #    SMART support is:     Unavailable - device lacks SMART capability.
@@ -119,7 +121,13 @@ for arg; do
     elif [[ "$DevModel" == *"INTEL SSDPEKNW010T8"* ]]; then
 	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');
     elif [[ "$DevModel" == *"Samsung SSD 980 PRO"* ]]; then
-	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');	
+	RemainingPercent=$(echo "$data" | grep "^Available Spare:" | awk '{print $NF}');
+    elif [[ "$DevModel" == *"SSDSC2KG240G8R"* ]]; then
+	RemainingPercent=$(echo "$data" | grep "^245 Percent_Life_Remaining " | awk '{print $NF}');
+    elif [[ "$DevModel" == *"MTFDDAK480TDS"* ]]; then
+	RemainingPercent=$(echo "$data" | grep "^245 Percent_Life_Remaining " | awk '{print $NF}');
+    elif [[ "$DevModel" == *"WDC  WDS100T2B0A"* ]]; then
+	RemainingPercent=$(echo "$data" | grep "^245 Percent_Life_Remaining " | awk '{print $NF}');	
     else
 	echo "Unknown model, $DevModel"
 	RemainingPercent="00"
