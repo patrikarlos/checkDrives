@@ -3,6 +3,8 @@
 ## Drive reporter tool
 ## -------------------
 ## Usage; checkDrive <URL> <TOKEN> <IDSTRING> device1 device2 ... deviceN
+##   or
+##        checkDrive 
 ##
 ## The tool will run smartctl <deviceK> and record various values.
 ## If the device is a spinning drive, it will do noting and move on.
@@ -19,28 +21,87 @@
 
 LC_NUMERIC="C"
 
-INFURL=$1
-TOKENSTRING=$2
-IDTAG=$3
 
-## SEt to 1 if to print debugging.
-VERBOSE=1
 
-shift 3
+CONFIG_FILE="/etc/default/checkdrives.cfg"
 
-##echo "URL: $INFURL|$TOKENSTRING|$IDTAG"
 
-if [[ $VERBOSE -eq 1 ]]; then
-    echo "URL: $INFURL"
-    echo "TOKEN: $TOKENSTRING"
-    echo "IDTAG: $IDTAG"
+[[ -r "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
+
+: "${VERBOSE:=1}"
+
+INFURL="${INFURL-}"
+TOKENSTRING="${TOKENSTRING-}"
+IDTAG="${IDTAG-}"
+declare -a DEVICES_ARG=()
+
+usage() {
+  cat <<EOF
+Usage: $0 [-c CONFIG] [-u URL] [-t TOKEN] [-i IDTAG] [-v VERBOSE] device [device...]
+  -c CONFIG    Path to config file (default: /etc/default/checkdrives.cfg)
+  -u URL       InfluxDB URL (overrides config)
+  -t TOKEN     InfluxDB token (overrides config)
+  -i IDTAG     Host/ID tag (overrides config)
+  -v VERBOSE   0..2 verbosity (overrides config)
+Devices may be written as "/dev/sda" or "/dev/sda,scsi"
+EOF
+}
+
+# Parse flags first
+while getopts ":c:u:t:i:v:h" opt; do
+  case "$opt" in
+    c) CONFIG_FILE="$OPTARG"; [[ -r "$CONFIG_FILE" ]] && source "$CONFIG_FILE" ;;
+    u) INFURL="$OPTARG" ;;
+    t) TOKENSTRING="$OPTARG" ;;
+    i) IDTAG="$OPTARG" ;;
+    v) VERBOSE="$OPTARG" ;;
+    h) usage; exit 0 ;;
+    \?) echo "Invalid option: -$OPTARG"; usage; exit 2 ;;
+    :)  echo "Option -$OPTARG requires an argument"; usage; exit 2 ;;
+  esac
+done
+shift $((OPTIND-1))
+
+# Devices from CLI or config
+if (( $# > 0 )); then
+  DEVICES_ARG=("$@")
 fi
 
-SUCCESSCNT=0;
+devices_to_process=()
+if (( ${#DEVICES_ARG[@]} > 0 )); then
+  devices_to_process=("${DEVICES_ARG[@]}")
+elif [[ -n "${DEVICES[*]-}" ]]; then
+  devices_to_process=("${DEVICES[@]}")
+else
+  echo "ERROR: No devices specified."
+  usage; exit 2
+fi
 
-## Evaluate if smartctl -a or -x is to be used. 
+missing=()
+[[ -z "${INFURL-}" ]] && missing+=("INFURL")
+[[ -z "${TOKENSTRING-}" ]] && missing+=("TOKENSTRING")
+[[ -z "${IDTAG-}" ]] && missing+=("IDTAG")
+if (( ${#missing[@]} )); then
+  echo "ERROR: Missing: ${missing[*]}"
+  usage; exit 2
+fi
 
-for arg; do
+if (( VERBOSE >= 1 )) && {
+  echo "URL: $INFURL"
+  echo "TOKEN: $TOKENSTRING"
+  echo "IDTAG: $IDTAG"
+}
+
+
+
+if [[ $VERBOSE -ge 1 ]]; then
+  echo "URL: $INFURL"
+  echo "TOKEN: $TOKENSTRING"
+  echo "IDTAG: $IDTAG"
+fi
+
+# --- LATER, replace:  for arg; do  ...  with: ---
+for arg in "${devices_to_process[@]}"; do
     if [[ $VERBOSE -gt 1 ]]; then
 	echo "---$arg---"
     fi

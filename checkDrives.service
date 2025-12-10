@@ -1,0 +1,6 @@
+[Unit]
+Description=Run checkDrives
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/checkDrives.sh
