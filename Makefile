@@ -8,7 +8,7 @@ SERVICE_NAME  = checkDrives.service
 TIMER_NAME    = checkDrives.timer
 SCRIPT_NAME   = checkDrives.sh
 CONFIG_TEMPLATE = checkDrives_template.cfg
-CONFIG_TARGET   = /etc/defaults/checkDrives.cfg
+CONFIG_TARGET   = /etc/default/checkDrives.cfg
 CONFIG_SCRIPT   = buildConfig.sh
 
 
