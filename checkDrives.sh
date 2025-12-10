@@ -1,22 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-
-
-
 CONFIG_FILE="/etc/default/checkdrives.cfg"
-[[ -r "$CONFIG_FILE" ]] && source "$CONFIG_FILE"
 
-echo "VERBOSE1:  $VERBOSE"
-: "${VERBOSE:=1}"
+cli_INFURL=""
+cli_TOKENSTRING=""
+cli_IDTAG=""
+cli_VERBOSE=""
+cli_TESTING=""
 
 
-echo "VERBOSE2:  $VERBOSE"
-
-INFURL="${INFURL-}"
-TOKENSTRING="${TOKENSTRING-}"
-IDTAG="${IDTAG-}"
-declare -a DEVICES_ARG=()
 
 usage() {
   cat <<EOF
@@ -30,14 +23,16 @@ Devices may be written as "/dev/sda" or "/dev/sda,scsi"
 EOF
 }
 
+
 # Parse flags first
-while getopts ":c:u:t:i:v:h" opt; do
+while getopts ":c:u:t:i:v:hx" opt; do
   case "$opt" in
-    c) CONFIG_FILE="$OPTARG"; echo "READ CFG $CONFIG_FILE"; [[ -r "$CONFIG_FILE" ]] && source "$CONFIG_FILE" ;;
-    u) INFURL="$OPTARG" ;;
-    t) TOKENSTRING="$OPTARG" ;;
-    i) IDTAG="$OPTARG" ;;
-    v) VERBOSE="$OPTARG" ;;
+    c) CONFIG_FILE="$OPTARG"; ;;
+    u) cli_INFURL="$OPTARG" ;;
+    t) cli_TOKENSTRING="$OPTARG" ;;
+    i) cli_IDTAG="$OPTARG" ;;
+    v) cli_VERBOSE="$OPTARG" ;;
+    x) cli_TESTING="1" ;;
     h) usage; exit 0 ;;
     \?) echo "Invalid option: -$OPTARG"; usage; exit 2 ;;
     :)  echo "Option -$OPTARG requires an argument"; usage; exit 2 ;;
@@ -45,10 +40,35 @@ while getopts ":c:u:t:i:v:h" opt; do
 done
 shift $((OPTIND-1))
 
+# Now source the chosen config ONCE
+if [[ -r "$CONFIG_FILE" ]]; then
+  # (Optional) clear any old values so the config defines them cleanly
+  unset INFURL TOKENSTRING IDTAG VERBOSE DEVICES
+  source "$CONFIG_FILE"
+fi
+
+# Apply defaults if still unset
+: "${VERBOSE:=1}"
+INFURL="${INFURL-}"
+TOKENSTRING="${TOKENSTRING-}"
+IDTAG="${IDTAG-}"
+TESTING="${TESTING-}"
+
+# Apply CLI overrides last (they always win if provided)
+[[ -n "$cli_INFURL"     ]] && INFURL="$cli_INFURL"
+[[ -n "$cli_TOKENSTRING" ]] && TOKENSTRING="$cli_TOKENSTRING"
+[[ -n "$cli_IDTAG"      ]] && IDTAG="$cli_IDTAG"
+[[ -n "$cli_VERBOSE"    ]] && VERBOSE="$cli_VERBOSE"
+[[ -n "$cli_TESTING"    ]] && TESTING="$cli_TESTING"
+
+
+DEVICES_ARG=()
+
 # Devices from CLI or config
 if (( $# > 0 )); then
   DEVICES_ARG=("$@")
 fi
+
 
 devices_to_process=()
 if (( ${#DEVICES_ARG[@]} > 0 )); then
@@ -74,7 +94,8 @@ fi
   echo "URL: $INFURL"
   echo "TOKEN: $TOKENSTRING"
   echo "IDTAG: $IDTAG"
-  echo "VERBOSE:  $VERBOSE"
+  echo "VERBOSE: $VERBOSE"
+  echo "TESTING: $TESTING"
 }
 
 SUCCESSCNT=0
@@ -174,22 +195,29 @@ for arg in "${devices_to_process[@]}"; do
 
   # Percent life remaining (drive-specific mapping)
   if [[ "$DevModel" == *"KINGSTON SEDC600M1920G"* ]]; then
-    RemainingPercent="$(printf '%s\n' "$data" | grep -E '^231' | awk '{print $NF}' || true)"
+#      echo "Kingston "
+    RemainingPercent="$(printf '%s\n' "$data" | grep -E '231' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"INTEL SSDPEKNW010T8"* ]]; then
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '^Available Spare:' | awk '{print $NF}' || true)"
+#      echo "Intel"
+    RemainingPercent="$(printf '%s\n' "$data" | grep -F 'Available Spare:' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"Samsung SSD 980 PRO"* ]]; then
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '^Available Spare:' | awk '{print $NF}' || true)"
+#      echo "Samsung"
+    RemainingPercent="$(printf '%s\n' "$data" | grep -F 'Available Spare:' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"SSDSC2KG240G8R"* ]]; then
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '^245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
+#      echo "SSD"
+    RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"MTFDDAK480TDS"* ]]; then
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '^245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
+#      echo "MTF"
+    RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"WDC WDS100T2B0A"* ]]; then
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '^245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
+#      echo "WDC"
+    RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
   else
     echo "Unknown model, $DevModel"
     RemainingPercent="00"
   fi
 
+#  echo "<---"
   # Normalize fields for line protocol
   DevModel_norm="$(printf '%s' "$DevModel" | sed 's/[[:space:]]\+/_/g')"
   UserCapacity_norm="$(printf '%s' "$UserCapacity" | sed 's/,//g')"
@@ -225,18 +253,26 @@ for arg in "${devices_to_process[@]}"; do
     echo "storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel_norm,Serial=$SerNum_norm,Firmware=$FirmWare_norm,Capacity=$UserCapacity_norm PowerOn=$Power_on_Hours_norm,Remain=$RemainingPercent_norm $timestamp"
   fi
 
+
+  http_code=""
   # Send to InfluxDB v2
-  response="$(
-    curl -s -w "%{http_code}" --request POST \
-      "$INFURL/api/v2/write?org=main-org&bucket=storage&precision=s" \
-      --header "Authorization: Token $TOKENSTRING" \
-      --header "Content-Type: text/plain; charset=utf-8" \
-      --header "Accept: application/json" \
-      --data-binary "storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel_norm,Serial=$SerNum_norm,Firmware=$FirmWare_norm,Capacity=$UserCapacity_norm PowerOn=$Power_on_Hours_norm,Remain=$RemainingPercent_norm $timestamp"
-  )" || true
+  if [[ $TESTING == "1" ]]; then
+      echo "TESTING; No http request sent. "
+      echo "-->"
+      echo "storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel_norm,Serial=$SerNum_norm,Firmware=$FirmWare_norm,Capacity=$UserCapacity_norm PowerOn=$Power_on_Hours_norm,Remain=$RemainingPercent_norm $timestamp"
+  else
+      response="$(
+          curl -s -w "%{http_code}" --request POST \
+      	  "$INFURL/api/v2/write?org=main-org&bucket=storage&precision=s" \
+	  --header "Authorization: Token $TOKENSTRING" \
+      	  --header "Content-Type: text/plain; charset=utf-8" \
+      	  --header "Accept: application/json" \
+      	  --data-binary "storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel_norm,Serial=$SerNum_norm,Firmware=$FirmWare_norm,Capacity=$UserCapacity_norm PowerOn=$Power_on_Hours_norm,Remain=$RemainingPercent_norm $timestamp"
+  	  )" || true
 
   http_code="$(tail -n1 <<< "$response")"
-
+  fi
+  
   (( VERBOSE >= 1 )) && echo "hc=$http_code"
 
   if [[ -z "$http_code" ]]; then
