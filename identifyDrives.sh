@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Usage: ./buildConfig.sh [models_file]
+# Usage: ./identifyDrives.sh [models_file]
 # Default models file: ./models
 # Set DEBUG=1 in environment to enable debug output, e.g. DEBUG=1 ./buildConfig.sh
 
@@ -130,10 +130,10 @@ else
         IFS='|' read -r m name devpath devmodel <<< "$entry"
         # For matched we print: "<m> <devpath>" and optionally show device model in parentheses if different
         if [[ -n "$devmodel" ]]; then
-            printf '  %s %s\n' "$m" "$devpath"
+            printf '%s | %s\n' "$devpath" "$m" 
         else
             # no device MODEL, print the NAME instead
-            printf '  %s %s\n' "$m" "$devpath"
+            printf '%s | %s\n' "$devpath" "$m" 
         fi
     done
 fi
@@ -143,12 +143,12 @@ echo
 echo "Unmatched"
 echo "---------"
 if [[ ${#device_unmatched_list[@]} -eq 0 ]]; then
-    echo "  (none)"
+    echo "(none)"
 else
     # Print each unmatched device as: "<device_MODEL_or_NAME> /dev/<NAME>"
     for entry in "${device_unmatched_list[@]}"; do
         IFS='|' read -r dev_display name <<< "$entry"
-        printf '  %s /dev/%s\n' "$dev_display" "$name"
+        printf '/dev/%s | %s \n' "$name" "$dev_display" 
     done
 fi
 echo
