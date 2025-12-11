@@ -1,9 +1,18 @@
 #!/bin/sh
 set -e
+
+if [ ! -f /etc/default/checkDrives.cfg ]; then
+    cp -a /usr/share/checkdrives/checkDrives.cfg.default /etc/default/checkDrives.cfg
+fi
+
+
 # Ensure systemd sees new units and enable/start the timer
 if command -v systemctl >/dev/null 2>&1; then
     systemctl daemon-reload || true
     systemctl enable checkDrives.timer || true
     systemctl start  checkDrives.timer || true
 fi
+
+
+
 exit 0

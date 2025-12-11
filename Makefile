@@ -33,6 +33,7 @@ DEBIAN_DIR := $(BUILDROOT)/DEBIAN
 PKG_BINDIR      := $(BUILDROOT)$(INSTALL_DIR_BIN)
 PKG_SYSTEMDDIR  := $(BUILDROOT)$(INSTALL_DIR_SYSTEMD)
 PKG_ETC_DEFAULT := $(BUILDROOT)/etc/default
+PKG_SHAREDIR    := $(BUILDROOT)/usr/share/checkdrives
 
 # ---- phony ----
 .PHONY: test install uninstall config package deb-structure deb-control deb-maintainers deb-payload clean
@@ -82,17 +83,18 @@ config:
 # ---- .deb packaging workflow ----
 package: deb-structure deb-control deb-maintainers deb-payload
 	@echo ">> Building .deb: $(PKG)_$(VERSION)_$(ARCH).deb"
-	dpkg-deb --build "build/$(PKG)"
+	dpkg-deb --build --root-owner-group "build/$(PKG)"
 	@mv "build/$(PKG).deb" "$(PKG)_$(VERSION)_$(ARCH).deb"
 	@echo ">> Created $(PKG)_$(VERSION)_$(ARCH).deb"
 
 deb-structure:
 	@echo ">> Preparing package filesystem"
 	rm -rf "$(BUILDROOT)"
-	install -d "$(DEBIAN_DIR)"
-	install -d "$(PKG_BINDIR)"
-	install -d "$(PKG_SYSTEMDDIR)"
-	install -d "$(PKG_ETC_DEFAULT)"
+	install -d -o root -g root "$(DEBIAN_DIR)"
+	install -d -o root -g root "$(PKG_BINDIR)"
+	install -d -o root -g root "$(PKG_SYSTEMDDIR)"
+	install -d -o root -g root "$(PKG_ETC_DEFAULT)"
+	install -d -o root -g root "$(PKG_SHAREDIR)"
 
 deb-control:
 	@echo ">> Writing DEBIAN/control"
@@ -129,15 +131,22 @@ deb-maintainers:
 deb-payload:
 	@echo ">> Staging payload files"
 	# Scripts
-	install -m 0755 "$(SCRIPT_NAME)" "$(PKG_BINDIR)/$(SCRIPT_NAME)"
-	if [ -f "$(CONFIG_SCRIPT)" ]; then install -m 0755 "$(CONFIG_SCRIPT)" "$(PKG_BINDIR)/$(CONFIG_SCRIPT)"; fi
+	install -m 0755 -o root -g root "$(SCRIPT_NAME)" "$(PKG_BINDIR)/$(SCRIPT_NAME)"
+	if [ -f "$(CONFIG_SCRIPT)" ]; then install -m 0755 -o root -g root "$(CONFIG_SCRIPT)" "$(PKG_BINDIR)/$(CONFIG_SCRIPT)"; fi
+
+	# Default config
+	# Template -> /usr/share/checkdrives/checkDrives.cfg.default
+	install -m 0644 -o root -g root "$(CONFIG_TEMPLATE)" "$(PKG_SHAREDIR)/checkDrives.cfg.default"
+	# Template -> /etc/default/checkDrives.cfg
+	install -m 0644 -o root -g root "$(CONFIG_TEMPLATE)" "$(PKG_ETC_DEFAULT)/checkDrives.cfg"
+
 	# Units
-	install -m 0644 "$(SERVICE_NAME)" "$(PKG_SYSTEMDDIR)/$(SERVICE_NAME)"
-	install -m 0644 "$(TIMER_NAME)"   "$(PKG_SYSTEMDDIR)/$(TIMER_NAME)"
-	# Config template -> installed as /etc/default/checkdrives.cfg
-	install -m 0644 "$(CONFIG_TEMPLATE)" "$(PKG_ETC_DEFAULT)/checkDrives.cfg"
+	install -m 0644 -o root -g root "$(SERVICE_NAME)" "$(PKG_SYSTEMDDIR)/$(SERVICE_NAME)"
+	install -m 0644 -o root -g root "$(TIMER_NAME)"   "$(PKG_SYSTEMDDIR)/$(TIMER_NAME)"
+
 	# Models -> installed as /etc/default/checkDrives.models
-	install -m 0644 "$(MODELS)" "$(PKG_ETC_DEFAULT)/checkDrives.models"
+	test -f "$(MODELS)" || { echo "ERROR: Missing MODELS '$(MODELS)'"; exit 1; }
+	install -m 0644 -o root -g root "$(MODELS)" "$(PKG_ETC_DEFAULT)/checkDrives.models"
 
 # ---- housekeeping ----
 clean:
