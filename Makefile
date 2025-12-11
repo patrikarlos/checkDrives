@@ -22,7 +22,7 @@ SECTION    := utils
 PRIORITY   := optional
 MAINTAINER := Patrik Arlos <patrik.arlos@bth.se>
 DESCRIPTION:= Check drives and report SMART metrics via a systemd timer/service
-HOMEPAGE   := https://github.com/patrikarlos/checkdr
+HOMEPAGE   := https://github.com/patrikarlos/checkDrives
 DEPENDS    := smartmontools, curl
 
 # Build root for .deb
@@ -52,7 +52,7 @@ install:
 	install -m 644 $(SERVICE_NAME) $(INSTALL_DIR_SYSTEMD)/$(SERVICE_NAME)
 	install -m 644 $(TIMER_NAME)   $(INSTALL_DIR_SYSTEMD)/$(TIMER_NAME)
 	install -m 644 $(CONFIG_TEMPLATE) $(CONFIG_TARGET)
-	install -m 644 $(MODELS) $(MODEL_TARGET)
+	install -m 644 $(MODELS) $(MODELS_TARGET)
 	@echo "Reloading systemd..."
 	systemctl daemon-reload
 	@echo "Enabling and starting timer..."
@@ -134,8 +134,10 @@ deb-payload:
 	# Units
 	install -m 0644 "$(SERVICE_NAME)" "$(PKG_SYSTEMDDIR)/$(SERVICE_NAME)"
 	install -m 0644 "$(TIMER_NAME)"   "$(PKG_SYSTEMDDIR)/$(TIMER_NAME)"
-	# Config template -> installed as /etc/default/checkDrives.cfg
+	# Config template -> installed as /etc/default/checkdrives.cfg
 	install -m 0644 "$(CONFIG_TEMPLATE)" "$(PKG_ETC_DEFAULT)/checkDrives.cfg"
+	# Models -> installed as /etc/default/checkDrives.models
+	install -m 0644 "$(MODELS)" "$(PKG_ETC_DEFAULT)/checkDrives.models"
 
 # ---- housekeeping ----
 clean:

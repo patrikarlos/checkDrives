@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # Usage: ./identifyDrives [models_file]
-# Default models file: /etc/default/checkdrives.models
-# Set DEBUG=1 in environment to enable debug output, e.g. DEBUG=1 ./buildConfig.sh
+# Default models file: /etc/default/checkDrives.models
+# Set DEBUG=1 in environment to enable debug output, e.g. DEBUG=1 
 
-models_file="${1:-/etc/default/checkdrives.models}"
+models_file="${1:-/etc/default/checkDrives.models}"
 debug=${DEBUG:-0}
 
 log_debug() {

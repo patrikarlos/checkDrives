@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CONFIG_FILE="/etc/default/checkdrives.cfg"
+CONFIG_FILE="/etc/default/checkDrives.cfg"
 
 cli_INFURL=""
 cli_TOKENSTRING=""
