@@ -229,18 +229,17 @@ for arg in "${devices_to_process[@]}"; do
   fi
 
   # Normalize fields for line protocol
-  DevModel_sp="$(printf '%s' "$DevModel" | sed 's/[[:space:]]\+/_/g')"
+  DevModel_norm="$(printf '%s' "$DevModel" | sed 's/[[:space:]]\+/_/g')"
+  FirmWare_norm="$(printf '%s' "$FirmWare" | sed 's/ //g')"
+  SerNum_norm="$(printf '%s' "$SerNum" | sed 's/ //g')"
+
   UserCapacity_sp="$(printf '%s' "$UserCapacity" | sed 's/,//g'| sed 's/[[:space:]]\+//g')"
-  FirmWare_sp="$(printf '%s' "$FirmWare" | sed 's/ //g')"
-  SerNum_sp="$(printf '%s' "$SerNum" | sed 's/ //g')"
   Power_on_Hours_sp="$(printf '%s' "$Power_on_Hours" | sed 's/,//g' | sed 's/[[:space:]]\+//g')"
   RemainingPercent_sp="$(printf '%s' "$RemainingPercent" | sed 's/%//g')"
 
 
-  DevModel_norm=$(clean_int "$DevModel_sp")
+
   UserCapacity_norm=$(clean_int "$UserCapacity_sp")
-  FirmWare_norm=$(clean_int "$FirmWare_sp")
-  SerNum_norm=$(clean_int "$SerNum_sp")
   Power_on_Hours_norm=$(clean_int "$Power_on_Hours_sp")
   RemainingPercent_norm=$(clean_int "$RemainingPercent_sp")
 

@@ -9,7 +9,7 @@ TIMER_NAME    = checkDrives.timer
 SCRIPT_NAME   = checkDrives.sh
 CONFIG_TEMPLATE = checkDrives_template.cfg
 CONFIG_TARGET   = /etc/default/checkDrives.cfg
-CONFIG_SCRIPT   = buildConfig.sh
+CONFIG_SCRIPT   = identifyDrives.sh
 
 
 .PHONY: install uninstall config
@@ -57,6 +57,6 @@ config:
 
 test:
 	@echo "Testing script..."
-	./${SCRIPT_NAME} -c ${CONFIG_TEMPLATE}
+	./${SCRIPT_NAME} -c ${CONFIG_TEMPLATE} -x
 
 	@echo "Testing complete."
