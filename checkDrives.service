@@ -3,4 +3,7 @@ Description=Run checkDrives
 
 [Service]
 Type=oneshot
+Environment=LANG=C
+Environment=LC_ALL=C
+Environment=LC_NUMERIC=C
 ExecStart=/usr/local/bin/checkDrives.sh

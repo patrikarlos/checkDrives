@@ -23,6 +23,11 @@ Devices may be written as "/dev/sda" or "/dev/sda,scsi"
 EOF
 }
 
+clean_int() {
+  # keep only ASCII digits 0-9
+  echo "$1" | tr -cd '0-9'
+}
+
 
 # Parse flags first
 while getopts ":c:u:t:i:v:hx" opt; do
@@ -223,14 +228,24 @@ for arg in "${devices_to_process[@]}"; do
     RemainingPercent="00"
   fi
 
-#  echo "<---"
   # Normalize fields for line protocol
-  DevModel_norm="$(printf '%s' "$DevModel" | sed 's/[[:space:]]\+/_/g')"
-  UserCapacity_norm="$(printf '%s' "$UserCapacity" | sed 's/,//g')"
-  FirmWare_norm="$(printf '%s' "$FirmWare" | sed 's/ //g')"
-  SerNum_norm="$(printf '%s' "$SerNum" | sed 's/ //g')"
-  Power_on_Hours_norm="$(printf '%s' "$Power_on_Hours" | sed 's/,//g')"
-  RemainingPercent_norm="$(printf '%s' "$RemainingPercent" | sed 's/%//g')"
+  DevModel_sp="$(printf '%s' "$DevModel" | sed 's/[[:space:]]\+/_/g')"
+  UserCapacity_sp="$(printf '%s' "$UserCapacity" | sed 's/,//g'| sed 's/[[:space:]]\+//g')"
+  FirmWare_sp="$(printf '%s' "$FirmWare" | sed 's/ //g')"
+  SerNum_sp="$(printf '%s' "$SerNum" | sed 's/ //g')"
+  Power_on_Hours_sp="$(printf '%s' "$Power_on_Hours" | sed 's/,//g' | sed 's/[[:space:]]\+//g')"
+  RemainingPercent_sp="$(printf '%s' "$RemainingPercent" | sed 's/%//g')"
+
+
+  DevModel_norm=$(clean_int "$DevModel_sp")
+  UserCapacity_norm=$(clean_int "$UserCapacity_sp")
+  FirmWare_norm=$(clean_int "$FirmWare_sp")
+  SerNum_norm=$(clean_int "$SerNum_sp")
+  Power_on_Hours_norm=$(clean_int "$Power_on_Hours_sp")
+  RemainingPercent_norm=$(clean_int "$RemainingPercent_sp")
+
+
+  
   [[ -z "$RemainingPercent_norm" ]] && RemainingPercent_norm="00"
 
   if [[ $VERBOSE -ge 1 ]]; then
@@ -266,6 +281,7 @@ for arg in "${devices_to_process[@]}"; do
       echo "TESTING; No http request sent. "
       echo "-->"
       echo "storage,host=$IDTAG,Device=$DEVICESTRING,Model=$DevModel_norm,Serial=$SerNum_norm,Firmware=$FirmWare_norm,Capacity=$UserCapacity_norm PowerOn=$Power_on_Hours_norm,Remain=$RemainingPercent_norm $timestamp"
+      http_code="204"
   else
       response="$(
           curl -s -w "%{http_code}" --request POST \
@@ -291,9 +307,13 @@ for arg in "${devices_to_process[@]}"; do
     exit 1
   fi
 
-  ((SUCCESSCNT++))
+  (( SUCCESSCNT +=1 ))
 done
+
 
 if [[ $VERBOSE -ge 1 ]]; then
   echo "Successfully sent $SUCCESSCNT devices."
 fi
+
+## Terminate successfully.
+exit 0
