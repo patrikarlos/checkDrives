@@ -7,12 +7,12 @@ INSTALL_DIR_SYSTEMD  = /etc/systemd/system
 INSTALL_DIR_ETC      = /etc
 SERVICE_NAME         = checkDrives.service
 TIMER_NAME           = checkDrives.timer
-SCRIPT_NAME          = checkDrives.sh
+SCRIPT_NAME          = checkDrives
 CONFIG_TEMPLATE      = checkDrives_template.cfg
 MODELS		     = models
 CONFIG_TARGET        = /etc/default/checkDrives.cfg
 MODELS_TARGET        = /etc/default/checkDrives.models
-CONFIG_SCRIPT        = identifyDrives.sh
+CONFIG_SCRIPT        = identifyDrives
 
 # ---- packaging config ----
 PKG        := checkdrives
@@ -35,9 +35,15 @@ PKG_SYSTEMDDIR  := $(BUILDROOT)$(INSTALL_DIR_SYSTEMD)
 PKG_ETC_DEFAULT := $(BUILDROOT)/etc/default
 
 # ---- phony ----
-.PHONY: install uninstall config test package deb-structure deb-control deb-maintainers deb-payload clean
+.PHONY: test install uninstall config package deb-structure deb-control deb-maintainers deb-payload clean
 
 # ---- existing targets ----
+
+test:
+	@echo "Testing script..."
+	./${SCRIPT_NAME} -c ${CONFIG_TEMPLATE} -x
+	@echo "Testing complete."
+
 install:
 	@echo "Installing checkDrives service and timer..."
 	install -m 755 $(SCRIPT_NAME) $(INSTALL_DIR_BIN)/$(SCRIPT_NAME)
@@ -72,11 +78,6 @@ config:
 	@chmod +x ./$(CONFIG_SCRIPT)
 	./$(CONFIG_SCRIPT)
 	@echo "Configuration complete."
-
-test:
-	@echo "Testing script..."
-	./${SCRIPT_NAME} -c ${CONFIG_TEMPLATE} -x
-	@echo "Testing complete."
 
 # ---- .deb packaging workflow ----
 package: deb-structure deb-control deb-maintainers deb-payload
