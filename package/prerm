@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+# Stop and disable on removal/deconfigure
+if [ "$1" = "remove" ] || [ "$1" = "deconfigure" ]; then
+  if command -v systemctl >/dev/null 2>&1; then
+    systemctl stop checkDrives.timer || true
+    systemctl disable checkDrives.timer || true
+  fi
+fi
+exit 0
