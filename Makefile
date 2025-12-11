@@ -9,7 +9,9 @@ SERVICE_NAME         = checkDrives.service
 TIMER_NAME           = checkDrives.timer
 SCRIPT_NAME          = checkDrives.sh
 CONFIG_TEMPLATE      = checkDrives_template.cfg
+MODELS		     = models
 CONFIG_TARGET        = /etc/default/checkDrives.cfg
+MODELS_TARGET        = /etc/default/checkDrives.models
 CONFIG_SCRIPT        = identifyDrives.sh
 
 # ---- packaging config ----
@@ -18,9 +20,9 @@ VERSION    := $(shell date +%Y.%m.%d.%H%M)
 ARCH       := $(shell dpkg --print-architecture)
 SECTION    := utils
 PRIORITY   := optional
-MAINTAINER := Patrik Arlos <patrik.arlos@example.com>
+MAINTAINER := Patrik Arlos <patrik.arlos@bth.se>
 DESCRIPTION:= Check drives and report SMART metrics via a systemd timer/service
-HOMEPAGE   := https://example.invalid/
+HOMEPAGE   := https://github.com/patrikarlos/checkdr
 DEPENDS    := smartmontools, curl
 
 # Build root for .deb
@@ -44,6 +46,7 @@ install:
 	install -m 644 $(SERVICE_NAME) $(INSTALL_DIR_SYSTEMD)/$(SERVICE_NAME)
 	install -m 644 $(TIMER_NAME)   $(INSTALL_DIR_SYSTEMD)/$(TIMER_NAME)
 	install -m 644 $(CONFIG_TEMPLATE) $(CONFIG_TARGET)
+	install -m 644 $(MODELS) $(MODEL_TARGET)
 	@echo "Reloading systemd..."
 	systemctl daemon-reload
 	@echo "Enabling and starting timer..."
