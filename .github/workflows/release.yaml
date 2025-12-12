@@ -69,7 +69,7 @@ jobs:
       - name: Generate SHA256 checksum
         run: |
           sha256sum "${{ steps.deb.outputs.file }}" > "${{ steps.deb.outputs.file }}.sha256"
-          sha256sum checkdrives_latest.deb > checkdrives_latest.deb.sha256"
+#          sha256sum checkdrives_latest.deb > checkdrives_latest.deb.sha256"
 
       # OPTIONAL GPG signing step
       # Enable only if you add your private key in repository secrets
