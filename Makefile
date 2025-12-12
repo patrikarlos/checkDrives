@@ -35,6 +35,35 @@ PKG_SYSTEMDDIR  := $(BUILDROOT)$(INSTALL_DIR_SYSTEMD)
 PKG_ETC_DEFAULT := $(BUILDROOT)/etc/default
 PKG_SHAREDIR    := $(BUILDROOT)/usr/share/checkdrives
 
+# --- Versioning (Git-aware, Debian-friendly) ---
+# Try to get a numeric tag (e.g., 1.2.3). If not, fall back to a dev version.
+GIT_TAG       := $(shell git describe --tags --match '[0-9]*' --abbrev=0 2>/dev/null)
+GIT_DESCRIBE  := $(shell git describe --tags --dirty --always 2>/dev/null)
+
+# Upstream version: prefer numeric tag; else sanitized describe or timestamp
+ifeq ($(strip $(GIT_TAG)),)
+  # No numeric tag: sanitize describe → ensure it starts with a digit
+  # Strip leading 'v', then prefix non-digit with 0~
+  UPSTREAM_VERSION := $(shell echo "$(GIT_DESCRIBE)" | sed -E 's/^v//' | sed -E 's/^[^0-9]/0~&/')
+  # If still empty (e.g., not a git repo), use timestamp
+  ifeq ($(strip $(UPSTREAM_VERSION)),)
+    UPSTREAM_VERSION := $(shell date +%Y.%m.%d.%H%M)
+  endif
+else
+  UPSTREAM_VERSION := $(GIT_TAG)
+endif
+
+# Debian revision: bump when you change packaging without changing upstream code
+DEB_REVISION ?= 1
+
+# Final Debian Version field
+VERSION := $(UPSTREAM_VERSION)-$(DEB_REVISION)
+
+# Example use:
+# dpkg-deb will receive VERSION; control file writes should use $(VERSION)
+
+
+
 # ---- phony ----
 .PHONY: test install uninstall config package deb-structure deb-control deb-maintainers deb-payload clean
 
@@ -86,6 +115,8 @@ package: deb-structure deb-control deb-maintainers deb-payload
 	dpkg-deb --build --root-owner-group "build/$(PKG)"
 	@mv "build/$(PKG).deb" "$(PKG)_$(VERSION)_$(ARCH).deb"
 	@echo ">> Created $(PKG)_$(VERSION)_$(ARCH).deb"
+	@echo ">> Create default shorter name, as link $(PKG).deb."
+	@ln -s "$(PKG)_$(VERSION)_$(ARCH).deb" "$(PKG).deb" 
 
 deb-structure:
 	@echo ">> Preparing package filesystem"

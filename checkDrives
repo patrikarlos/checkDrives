@@ -19,8 +19,14 @@ Usage: $0 [-c CONFIG] [-u URL] [-t TOKEN] [-i IDTAG] [-v VERBOSE] device [device
   -t TOKEN     InfluxDB token (overrides config)
   -i IDTAG     Host/ID tag (overrides config)
   -v VERBOSE   0..2 verbosity (overrides config)
+  -V VERSION   Show version
 Devices may be written as "/dev/sda" or "/dev/sda,scsi"
 EOF
+}
+
+show_version() {
+    myVERSION="0.1.0"
+    echo "$0 version $myVERSION"
 }
 
 clean_int() {
@@ -30,7 +36,7 @@ clean_int() {
 
 
 # Parse flags first
-while getopts ":c:u:t:i:v:hx" opt; do
+while getopts ":c:u:t:i:v:hxV" opt; do
   case "$opt" in
     c) CONFIG_FILE="$OPTARG"; ;;
     u) cli_INFURL="$OPTARG" ;;
@@ -38,6 +44,7 @@ while getopts ":c:u:t:i:v:hx" opt; do
     i) cli_IDTAG="$OPTARG" ;;
     v) cli_VERBOSE="$OPTARG" ;;
     x) cli_TESTING="1" ;;
+    V) show_version; exit 0 ;;
     h) usage; exit 0 ;;
     \?) echo "Invalid option: -$OPTARG"; usage; exit 2 ;;
     :)  echo "Option -$OPTARG requires an argument"; usage; exit 2 ;;
