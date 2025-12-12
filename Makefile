@@ -16,7 +16,6 @@ CONFIG_SCRIPT        = identifyDrives
 
 # ---- packaging config ----
 PKG        := checkdrives
-VERSION    := $(shell date +%Y.%m.%d.%H%M)
 ARCH       := $(shell dpkg --print-architecture)
 SECTION    := utils
 PRIORITY   := optional
@@ -115,10 +114,6 @@ package: deb-structure deb-control deb-maintainers deb-payload
 	dpkg-deb --build --root-owner-group "build/$(PKG)"
 	@mv "build/$(PKG).deb" "$(PKG)_$(VERSION)_$(ARCH).deb"
 	@echo ">> Created $(PKG)_$(VERSION)_$(ARCH).deb"
-	@echo ">> Create default shorter name, as link $(PKG).deb."
-	@echo "Copying to RELEASES"
-	@cp "$(PKG)_$(VERSION)_$(ARCH).deb" "RELEASES/"
-	@cp "$(PKG)_$(VERSION)_$(ARCH).deb" "RELEASES/$(PKG)_latests.deb"
 
 
 deb-structure:

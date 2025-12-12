@@ -17,7 +17,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential dpkg-dev fakeroot smartctl curl 
+          sudo apt-get install -y build-essential dpkg-dev fakeroot smartmontools curl 
 
       - name: Build .deb package
         run: |
