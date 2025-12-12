@@ -175,7 +175,7 @@ package:
 
 	# Models file
 	test -f "$(MODELS)" || { echo "ERROR: Missing MODELS '$(MODELS)'"; exit 1; }
-	install -m 0644 "$(MODELS)" "$(PKG_ETC_DEFAULT)/$(PKG).models"
+	install -m 0644 "$(MODELS)" "$(PKG_ETC_DEFAULT)/$(SCRIPT_NAME).models"
 
 	@echo ">> Building .deb $(BUILDROOT)"
 	fakeroot dpkg-deb --build --root-owner-group "$(BUILDROOT)"
