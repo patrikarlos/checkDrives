@@ -81,7 +81,7 @@ apply_version:
 	@git add $(VERSION_FILES)
 	@git commit -m "Bump version to $(NEW_VERSION)"
 	@git tag -a $(NEW_VERSION) -m "Release $(NEW_VERSION)"
-	@echo "Created tag v$(NEW_VERSION)"
+	@echo "Created tag $(NEW_VERSION)"
 
 
 
