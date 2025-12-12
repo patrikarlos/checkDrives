@@ -1,4 +1,6 @@
-name: Build and Release
+
+
+name: Build and Release Debian Package
 
 on:
   push:
@@ -8,54 +10,89 @@ on:
 
 jobs:
   build:
+    name: Build .deb package
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for version extraction
 
-      - name: Install build tools
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential dpkg-dev fakeroot smartmontools curl 
+          sudo apt-get install -y build-essential dpkg-dev fakeroot
 
-      - name: Build .deb package
+      - name: Build package
         run: |
           make package
+          echo "Available files in ./build:"
           ls -lh build/
 
-      - name: Find built .deb
+      - name: Find built .deb file
         id: finddeb
         run: |
-          DEB=$(ls build/*.deb | head -n 1)
-          echo "debfile=$DEB" >> "$GITHUB_OUTPUT"
+          FILE=$(ls build/*.deb | head -n 1)
+          echo "debfile=$FILE" >> "$GITHUB_OUTPUT"
+          echo "Detected package: $FILE"
 
-      - name: Upload build artifact (to Actions)
+      - name: Upload artifact to workflow (for release job)
         uses: actions/upload-artifact@v4
         with:
           name: deb-package
           path: ${{ steps.finddeb.outputs.debfile }}
 
   release:
+    name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download built artifact
+      - name: Download built package artifact
         uses: actions/download-artifact@v4
         with:
           name: deb-package
           path: .
 
-      - name: Get the deb filename
+      - name: Find package file
         id: deb
         run: |
           FILE=$(ls *.deb)
           echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "Found: $FILE"
 
-      - name: Create Release
+      - name: Copy stable latest filename
+        run: |
+          cp "${{ steps.deb.outputs.file }}" checkdrives_latest.deb
+
+      - name: Generate SHA256 checksum
+        run: |
+          sha256sum "${{ steps.deb.outputs.file }}" > "${{ steps.deb.outputs.file }}.sha256"
+          sha256sum checkdrives_latest.deb > checkdrives_latest.deb.sha256"
+
+      # OPTIONAL GPG signing step
+      # Enable only if you add your private key in repository secrets
+      # and uncomment below.
+
+      # - name: Import GPG key
+      #   if: secrets.GPG_PRIVATE_KEY != ''
+      #   run: |
+      #     echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      # - name: GPG sign the .deb
+      #   if: secrets.GPG_PRIVATE_KEY != ''
+      #   run: |
+      #     gpg --batch --armor --output "${{ steps.deb.outputs.file }}.asc" --detach-sign "${{ steps.deb.outputs.file }}"
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.deb.outputs.file }}
+          files: |
+            ${{ steps.deb.outputs.file }}
+            ${{ steps.deb.outputs.file }}.sha256
+            checkdrives_latest.deb
+            checkdrives_latest.deb.sha256
+            # ${{ steps.deb.outputs.file }}.asc     # enable if using GPG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
