@@ -39,7 +39,7 @@ jobs:
 
       - name: View content of .deb file
         run: |
-          dpkg-deb -c $FILE
+          dpkg-deb -c build/checkdrives.deb
 
       - name: Upload artifact to workflow (for release job)
         uses: actions/upload-artifact@v4
