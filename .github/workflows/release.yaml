@@ -37,6 +37,10 @@ jobs:
           echo "debfile=$FILE" >> "$GITHUB_OUTPUT"
           echo "Detected package: $FILE"
 
+      - name: View content of .deb file
+        run: |
+	  dpkg-deb -c $FILE
+
       - name: Upload artifact to workflow (for release job)
         uses: actions/upload-artifact@v4
         with:
