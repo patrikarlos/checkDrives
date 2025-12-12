@@ -1,4 +1,3 @@
-
 # Makefile for checkDrives system service
 
 # ---- existing variables ----
@@ -9,64 +8,83 @@ SERVICE_NAME         = checkDrives.service
 TIMER_NAME           = checkDrives.timer
 SCRIPT_NAME          = checkDrives
 CONFIG_TEMPLATE      = checkDrives_template.cfg
-MODELS		     = models
+MODELS               = models
 CONFIG_TARGET        = /etc/default/checkDrives.cfg
 MODELS_TARGET        = /etc/default/checkDrives.models
 CONFIG_SCRIPT        = identifyDrives
 
-# ---- packaging config ----
-PKG        := checkdrives
-ARCH       := $(shell dpkg --print-architecture)
-SECTION    := utils
-PRIORITY   := optional
-MAINTAINER := Patrik Arlos <patrik.arlos@bth.se>
-DESCRIPTION:= Check drives and report SMART metrics via a systemd timer/service
-HOMEPAGE   := https://github.com/patrikarlos/checkDrives
-DEPENDS    := smartmontools, curl
-
-# Build root for .deb
-BUILDROOT  := build/$(PKG)
-DEBIAN_DIR := $(BUILDROOT)/DEBIAN
-
-# Payload dirs inside the package
-PKG_BINDIR      := $(BUILDROOT)$(INSTALL_DIR_BIN)
-PKG_SYSTEMDDIR  := $(BUILDROOT)$(INSTALL_DIR_SYSTEMD)
-PKG_ETC_DEFAULT := $(BUILDROOT)/etc/default
-PKG_SHAREDIR    := $(BUILDROOT)/usr/share/checkdrives
-
-# --- Versioning (Git-aware, Debian-friendly) ---
-# Try to get a numeric tag (e.g., 1.2.3). If not, fall back to a dev version.
-GIT_TAG       := $(shell git describe --tags --match '[0-9]*' --abbrev=0 2>/dev/null)
-GIT_DESCRIBE  := $(shell git describe --tags --dirty --always 2>/dev/null)
-
-# Upstream version: prefer numeric tag; else sanitized describe or timestamp
-ifeq ($(strip $(GIT_TAG)),)
-  # No numeric tag: sanitize describe → ensure it starts with a digit
-  # Strip leading 'v', then prefix non-digit with 0~
-  UPSTREAM_VERSION := $(shell echo "$(GIT_DESCRIBE)" | sed -E 's/^v//' | sed -E 's/^[^0-9]/0~&/')
-  # If still empty (e.g., not a git repo), use timestamp
-  ifeq ($(strip $(UPSTREAM_VERSION)),)
-    UPSTREAM_VERSION := $(shell date +%Y.%m.%d.%H%M)
-  endif
-else
-  UPSTREAM_VERSION := $(GIT_TAG)
-endif
-
-# Debian revision: bump when you change packaging without changing upstream code
-DEB_REVISION ?= 1
-
-# Final Debian Version field
-VERSION := $(UPSTREAM_VERSION)-$(DEB_REVISION)
-
-# Example use:
-# dpkg-deb will receive VERSION; control file writes should use $(VERSION)
+PKG          = checkdrives
+VERSION      = $(shell git describe --tags --always --dirty 2>/dev/null || echo "0.0.0")
+BUILDROOT    = build/$(PKG)
+PKG_DEBDIR   = $(BUILDROOT)/DEBIAN
+PKG_BINDIR   = $(BUILDROOT)/usr/local/bin
+PKG_SYSDDIR  = $(BUILDROOT)/etc/systemd/system
+PKG_ETC_DEFAULT = $(BUILDROOT)/etc/default
+PKG_SHAREDIR = $(BUILDROOT)/usr/share/$(PKG)
 
 
+.PHONY: package clean install uninstall test config
 
-# ---- phony ----
-.PHONY: test install uninstall config package deb-structure deb-control deb-maintainers deb-payload clean
+default: package
 
-# ---- existing targets ----
+# Files where myVERSION="X.Y.Z" must be updated
+VERSION_FILES = checkDrives identifyDrives
+
+# Extract current version (strip leading v)
+CURRENT_VERSION := $(shell git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
+CURRENT_VERSION ?= 0.0.0
+
+get_version:
+	@echo "Current version: $(CURRENT_VERSION)"
+
+# ---- Helpers (run on command line, not make parser) ----
+
+define bump_patch
+echo $(CURRENT_VERSION) | awk -F. '{ printf "%d.%d.%d", $$1, $$2, $$3+1 }'
+endef
+
+define bump_minor
+echo $(CURRENT_VERSION) | awk -F. '{ printf "%d.%d.%d", $$1, $$2+1, 0 }'
+endef
+
+define bump_major
+echo $(CURRENT_VERSION) | awk -F. '{ printf "%d.%d.%d", $$1+1, 0, 0 }'
+endef
+
+# ---- Main version bump targets ----
+
+version:
+	@NEW_VERSION="$$( $(bump_patch) )"; \
+	echo "New patch version: $$NEW_VERSION"; \
+	$(MAKE) apply_version NEW_VERSION="$$NEW_VERSION"
+
+minorversion:
+	@NEW_VERSION="$$( $(bump_minor) )"; \
+	echo "New minor version: $$NEW_VERSION"; \
+	$(MAKE) apply_version NEW_VERSION="$$NEW_VERSION"
+
+majorversion:
+	@NEW_VERSION="$$( $(bump_major) )"; \
+	echo "New major version: $$NEW_VERSION"; \
+	$(MAKE) apply_version NEW_VERSION="$$NEW_VERSION"
+
+# ---- Apply version to files, commit, and tag ----
+
+apply_version:
+	@echo "Updating version in files to $(NEW_VERSION)"
+	@for f in $(VERSION_FILES); do \
+		if [ -f "$$f" ]; then \
+			sed -i 's/myVERSION="[0-9.]*"/myVERSION="$(NEW_VERSION)"/' $$f; \
+			echo "Updated $$f"; \
+		fi; \
+	done
+	@git add $(VERSION_FILES)
+	@git commit -m "Bump version to $(NEW_VERSION)"
+	@git tag -a $(NEW_VERSION) -m "Release $(NEW_VERSION)"
+	@echo "Created tag v$(NEW_VERSION)"
+
+
+
 
 test:
 	@echo "Testing script..."
@@ -108,76 +126,63 @@ config:
 	./$(CONFIG_SCRIPT)
 	@echo "Configuration complete."
 
-# ---- .deb packaging workflow ----
-package: deb-structure deb-control deb-maintainers deb-payload
-	@echo ">> Building .deb: $(PKG)_$(VERSION)_$(ARCH).deb"
-	dpkg-deb --build --root-owner-group "build/$(PKG)"
-	@mv "build/$(PKG).deb" "$(PKG)_$(VERSION)_$(ARCH).deb"
-	@echo ">> Created $(PKG)_$(VERSION)_$(ARCH).deb"
-
-
-deb-structure:
+package:
 	@echo ">> Preparing package filesystem"
 	rm -rf "$(BUILDROOT)"
-	install -d -o root -g root "$(DEBIAN_DIR)"
-	install -d -o root -g root "$(PKG_BINDIR)"
-	install -d -o root -g root "$(PKG_SYSTEMDDIR)"
-	install -d -o root -g root "$(PKG_ETC_DEFAULT)"
-	install -d -o root -g root "$(PKG_SHAREDIR)"
+	install -d "$(PKG_DEBDIR)"
+	install -d "$(PKG_BINDIR)"
+	install -d "$(PKG_SYSDDIR)"
+	install -d "$(PKG_ETC_DEFAULT)"
+	install -d "$(PKG_SHAREDIR)"
 
-deb-control:
 	@echo ">> Writing DEBIAN/control"
 	printf '%s\n' \
 		"Package: $(PKG)" \
 		"Version: $(VERSION)" \
-		"Section: $(SECTION)" \
-		"Priority: $(PRIORITY)" \
-		"Architecture: $(ARCH)" \
-		"Maintainer: $(MAINTAINER)" \
-		"Depends: $(DEPENDS)" \
-		"Description: $(DESCRIPTION)" \
-		"Homepage: $(HOMEPAGE)" \
-		> "$(DEBIAN_DIR)/control"
-	@chmod 0644 "$(DEBIAN_DIR)/control"
+		"Section: utils" \
+		"Priority: optional" \
+		"Architecture: amd64" \
+		"Maintainer: Patrik Arlos <patrik.arlos@bth.se>" \
+		"Depends: smartmontools, curl" \
+		"Description: Check drives and report SMART metrics via a systemd timer/service" \
+		"Homepage: https://github.com/patrikarlos/checkDrives" \
+		> "$(PKG_DEBDIR)/control"
 
 	@echo ">> Marking config file as conffile"
 	printf '%s\n' \
-		"/etc/default/checkDrives.cfg" \
-		> "$(DEBIAN_DIR)/conffiles"
-	@chmod 0644 "$(DEBIAN_DIR)/conffiles"
+		"$(CONFIG_TARGET)" \
+		> "$(PKG_DEBDIR)/conffiles"
 
-deb-maintainers:
 	@echo ">> Writing maintainer scripts"
-	cp package/postinst "$(DEBIAN_DIR)/postinst" 
-	@chmod 0755 "$(DEBIAN_DIR)/postinst"
+	cp package/postinst "$(PKG_DEBDIR)/postinst"
+	cp package/prerm   "$(PKG_DEBDIR)/prerm"
+	cp package/postrm  "$(PKG_DEBDIR)/postrm"
+	chmod 0755 "$(PKG_DEBDIR)/postinst" "$(PKG_DEBDIR)/prerm" "$(PKG_DEBDIR)/postrm"
 
-	cp package/prerm "$(DEBIAN_DIR)/prerm"
-	@chmod 0755 "$(DEBIAN_DIR)/prerm"
-
-	cp package/postrm "$(DEBIAN_DIR)/postrm"
-	@chmod 0755 "$(DEBIAN_DIR)/postrm"
-
-deb-payload:
 	@echo ">> Staging payload files"
+
 	# Scripts
-	install -m 0755 -o root -g root "$(SCRIPT_NAME)" "$(PKG_BINDIR)/$(SCRIPT_NAME)"
-	if [ -f "$(CONFIG_SCRIPT)" ]; then install -m 0755 -o root -g root "$(CONFIG_SCRIPT)" "$(PKG_BINDIR)/$(CONFIG_SCRIPT)"; fi
+	install -m 0755 "$(SCRIPT_NAME)" "$(PKG_BINDIR)/$(SCRIPT_NAME)"
+	test -f "$(CONFIG_SCRIPT)" && install -m 0755 "$(CONFIG_SCRIPT)" "$(PKG_BINDIR)/$(CONFIG_SCRIPT)" || true
 
-	# Default config
-	# Template -> /usr/share/checkdrives/checkDrives.cfg.default
-	install -m 0644 -o root -g root "$(CONFIG_TEMPLATE)" "$(PKG_SHAREDIR)/checkDrives.cfg.default"
-	# Template -> /etc/default/checkDrives.cfg
-	install -m 0644 -o root -g root "$(CONFIG_TEMPLATE)" "$(PKG_ETC_DEFAULT)/checkDrives.cfg"
+	# Default config template
+	install -m 0644 "$(CONFIG_TEMPLATE)" "$(PKG_SHAREDIR)/$(SCRIPT_NAME).cfg.default"
+	install -m 0644 "$(CONFIG_TEMPLATE)" "$(PKG_ETC_DEFAULT)/$(SCRIPT_NAME).cfg"
 
-	# Units
-	install -m 0644 -o root -g root "$(SERVICE_NAME)" "$(PKG_SYSTEMDDIR)/$(SERVICE_NAME)"
-	install -m 0644 -o root -g root "$(TIMER_NAME)"   "$(PKG_SYSTEMDDIR)/$(TIMER_NAME)"
+	# Systemd Units
+	install -m 0644 "$(SERVICE_NAME)" "$(PKG_SYSDDIR)/$(SERVICE_NAME)"
+	install -m 0644 "$(TIMER_NAME)"   "$(PKG_SYSDDIR)/$(TIMER_NAME)"
 
-	# Models -> installed as /etc/default/checkDrives.models
+	# Models file
 	test -f "$(MODELS)" || { echo "ERROR: Missing MODELS '$(MODELS)'"; exit 1; }
-	install -m 0644 -o root -g root "$(MODELS)" "$(PKG_ETC_DEFAULT)/checkDrives.models"
+	install -m 0644 "$(MODELS)" "$(PKG_ETC_DEFAULT)/$(PKG).models"
 
-# ---- housekeeping ----
+	@echo ">> Building .deb"
+	fakeroot dpkg-deb --build --root-owner-group "$(BUILDROOT)"
+
+	@mv "$(BUILDROOT).deb" "$(PKG)_$(VERSION)_amd64.deb"
+	@echo ">> Created $(PKG)_$(VERSION)_amd64.deb"
+
 clean:
 	rm -rf build
 	rm -f $(PKG)_*.deb
