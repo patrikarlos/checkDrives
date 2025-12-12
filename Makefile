@@ -177,9 +177,9 @@ package:
 	test -f "$(MODELS)" || { echo "ERROR: Missing MODELS '$(MODELS)'"; exit 1; }
 	install -m 0644 "$(MODELS)" "$(PKG_ETC_DEFAULT)/$(PKG).models"
 
-	@echo ">> Building .deb"
+	@echo ">> Building .deb $(BUILDROOT)"
 	fakeroot dpkg-deb --build --root-owner-group "$(BUILDROOT)"
-
+	ls -la build
 	@cp "$(BUILDROOT).deb" "$(PKG)_$(VERSION)_amd64.deb"
 	@echo ">> Created $(PKG)_$(VERSION)_amd64.deb"
 
