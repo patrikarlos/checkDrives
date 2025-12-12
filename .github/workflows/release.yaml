@@ -72,7 +72,7 @@ jobs:
 
       - name: Generate SHA256 checksum latest
         run: |
-          sha256sum checkdrives_latest.deb > checkdrives_latest.deb.sha256"
+          sha256sum checkdrives_latest.deb > checkdrives_latest.deb.sha256
 
       # OPTIONAL GPG signing step
       # Enable only if you add your private key in repository secrets
