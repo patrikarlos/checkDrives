@@ -1,0 +1,61 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential dpkg-dev fakeroot smartctl curl 
+
+      - name: Build .deb package
+        run: |
+          make package
+          ls -lh build/
+
+      - name: Find built .deb
+        id: finddeb
+        run: |
+          DEB=$(ls build/*.deb | head -n 1)
+          echo "debfile=$DEB" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifact (to Actions)
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: ${{ steps.finddeb.outputs.debfile }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download built artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: deb-package
+          path: .
+
+      - name: Get the deb filename
+        id: deb
+        run: |
+          FILE=$(ls *.deb)
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.deb.outputs.file }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
