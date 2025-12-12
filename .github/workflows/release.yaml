@@ -77,6 +77,9 @@ jobs:
       # OPTIONAL GPG signing step
       # Enable only if you add your private key in repository secrets
       # and uncomment below.
+      # Append
+      # ${{ steps.deb.outputs.file }}.asc
+      # To files in 'Create GitHub Release' if activated. 
 
       # - name: Import GPG key
       #   if: secrets.GPG_PRIVATE_KEY != ''
@@ -96,6 +99,5 @@ jobs:
             ${{ steps.deb.outputs.file }}.sha256
             checkdrives_latest.deb
             checkdrives_latest.deb.sha256
-            # ${{ steps.deb.outputs.file }}.asc     # enable if using GPG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
