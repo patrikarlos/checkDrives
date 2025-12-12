@@ -180,7 +180,7 @@ package:
 	@echo ">> Building .deb"
 	fakeroot dpkg-deb --build --root-owner-group "$(BUILDROOT)"
 
-	@mv "$(BUILDROOT).deb" "$(PKG)_$(VERSION)_amd64.deb"
+	@cp "$(BUILDROOT).deb" "$(PKG)_$(VERSION)_amd64.deb"
 	@echo ">> Created $(PKG)_$(VERSION)_amd64.deb"
 
 clean:
