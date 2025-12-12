@@ -5,7 +5,7 @@ name: Build and Release Debian Package
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "*.*.*"
   workflow_dispatch:
 
 jobs:
