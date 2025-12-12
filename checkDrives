@@ -221,10 +221,7 @@ for arg in "${devices_to_process[@]}"; do
   elif [[ "$DevModel" == *"MTFDDAK480TDS"* ]]; then
 #      echo "MTF"
     RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
-  elif [[ "$DevModel" == *"WDS100T2B0A"* ]]; then
-#      echo "WDC"
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
-  elif [[ "$DevModel" == *"WDS240G2G0A"* || "$DevModel" == *"WDS480G2G0A"*  || "$DevModel" == *"WDS500G1R0A" || "$DevModel" == *"WDS100T1R0A" ]]; then
+  elif [[ "$DevModel" == *"WDS100T2B0A"* || "$DevModel" == *"WDS240G2G0A"* || "$DevModel" == *"WDS480G2G0A"*  || "$DevModel" == *"WDS500G1R0A" || "$DevModel" == *"WDS100T1R0A" ]]; then
       #      echo "WDC"
       ## These device has also '230 Media_Wearout_Indicator' that could be used. But then use $4
       #RemainingPercent="$(printf '%s\n' "$data" | grep -F '230 Media_Wearout_Indicator' | awk '{print $4}'
