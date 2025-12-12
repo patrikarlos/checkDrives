@@ -116,7 +116,11 @@ package: deb-structure deb-control deb-maintainers deb-payload
 	@mv "build/$(PKG).deb" "$(PKG)_$(VERSION)_$(ARCH).deb"
 	@echo ">> Created $(PKG)_$(VERSION)_$(ARCH).deb"
 	@echo ">> Create default shorter name, as link $(PKG).deb."
-	@ln -sf "$(PKG)_$(VERSION)_$(ARCH).deb" "$(PKG).deb" 
+	@ln -sf "$(PKG)_$(VERSION)_$(ARCH).deb" "$(PKG).deb"
+	@echo "Copying to RELEASES"
+	@cp "$(PKG)_$(VERSION)_$(ARCH).deb" "RELEASES/"
+	@cp "$(PKG)_$(VERSION)_$(ARCH).deb" "RELEASES/$(PKG).latests.deb"
+
 
 deb-structure:
 	@echo ">> Preparing package filesystem"
