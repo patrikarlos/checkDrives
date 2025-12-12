@@ -14,7 +14,7 @@ cli_TESTING=""
 usage() {
   cat <<EOF
 Usage: $0 [-c CONFIG] [-u URL] [-t TOKEN] [-i IDTAG] [-v VERBOSE] device [device...]
-  -c CONFIG    Path to config file (default: /etc/default/checkdrives.cfg)
+  -c CONFIG    Path to config file (default: $CONFIG_FILE)
   -u URL       InfluxDB URL (overrides config)
   -t TOKEN     InfluxDB token (overrides config)
   -i IDTAG     Host/ID tag (overrides config)

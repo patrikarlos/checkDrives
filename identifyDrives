@@ -5,14 +5,60 @@ set -euo pipefail
 # Default models file: /etc/default/checkDrives.models
 # Set DEBUG=1 in environment to enable debug output, e.g. DEBUG=1 
 
-models_file="${1:-/etc/default/checkDrives.models}"
+MODELS_FILE="/etc/default/checkDrives.models"
+CONFIG_FILE="/etc/default/checkDrives.cfg"
+myVERSION="0.1.13"
+
 debug=${DEBUG:-0}
+
+usage() {
+    cat <<EOF
+Usage: $0 [-m MODELS] [-M ] [-V]
+  -m MODELS Path to models file (default: $MODELS_FILE)
+  -c CONFIG Update CONFIG
+  -M        Build Data suitable for config file ONLY
+  -V        Show version
+EOF
+}
+
+
+
+show_version() {
+    echo "$0 version $myVERSION"
+}
+
+show_data() {
+    echo "$0 version $myVERSION"
+    echo "MODELS: $MODELS_FILE"
+    echo "MODELS: $CONFIG_FILE"
+    echo "DEBUG: $debug"
+}
 
 log_debug() {
     if [[ "$debug" -ne 0 ]]; then
         printf 'DEBUG: %s\n' "$*" >&2
     fi
 }
+
+BUILDMODEL=0
+UPDATECONFIG=0
+
+
+# Parse flags first
+while getopts ":c:MVhd" opt; do
+  case "$opt" in
+      m) MODELS_FILE="$OPTARG"; ;;
+      c) CONFIG_FILE="$OPTARG"; UPDATECONFIG=1; BUILDMODEL=1; ;;
+      M) BUILDMODEL=1; ;;
+      V) show_version; exit 0 ;;
+      h) usage; exit 0 ;;
+      d) show_data; exit 0 ;; 
+      \?) echo "Invalid option: -$OPTARG"; usage; exit 2 ;;
+      :)  echo "Option -$OPTARG requires an argument"; usage; exit 2 ;;
+  esac
+done
+
+
 
 # --- read block devices (only TYPE="disk" and ROTA="0") ---
 log_debug "Gathering block devices with lsblk (TYPE=disk, ROTA=0)..."
@@ -35,8 +81,8 @@ while IFS= read -r line; do
 done <<< "$lsblk_data"
 
 # --- read models file ---
-if [[ ! -f "$models_file" ]]; then
-    echo "Models file not found: $models_file" >&2
+if [[ ! -f "$MODELS_FILE" ]]; then
+    echo "Models file not found: $MODELS_FILE" >&2
     exit 2
 fi
 
@@ -49,7 +95,7 @@ while IFS= read -r m || [[ -n "$m" ]]; do
         continue
     fi
     models+=( "$m_trimmed" )
-done < "$models_file"
+done < "$MODELS_FILE"
 
 log_debug "Loaded models (count=${#models[@]}):"
 for m in "${models[@]}"; do log_debug "  [$m]"; done
@@ -110,48 +156,152 @@ for model in "${models[@]}"; do
 done
 
 # --- Output the report ---
-echo
-echo "======================================"
-echo " MATCH REPORT"
-echo "======================================"
-echo
 
-# Matched list header
-echo "Matched"
-echo "-------"
-if [[ ${#matches_list[@]} -eq 0 ]]; then
-    echo "  (none)"
-else
-    # Print unique matched entries grouped by model; but user asked "model and device name printed" for matched
-    # We'll print each match line: "<Model> /dev/<NAME>"
-    # If the model in matches entry is empty (shouldn't happen because models come from file), we skip printing empty.
-    # Keep order: as discovered.
-    for entry in "${matches_list[@]}"; do
-        IFS='|' read -r m name devpath devmodel <<< "$entry"
-        # For matched we print: "<m> <devpath>" and optionally show device model in parentheses if different
-        if [[ -n "$devmodel" ]]; then
-            printf '%s | %s\n' "$devpath" "$m" 
-        else
-            # no device MODEL, print the NAME instead
-            printf '%s | %s\n' "$devpath" "$m" 
-        fi
-    done
-fi
-echo
+if [[ "$BUILDMODEL" -eq 0 ]]; then
 
-# Unmatched list header
-echo "Unmatched"
-echo "---------"
-if [[ ${#device_unmatched_list[@]} -eq 0 ]]; then
-    echo "(none)"
+
+    echo
+    echo "======================================"
+    echo " MATCH REPORT"
+    echo "======================================"
+    echo
+
+    # Matched list header
+    echo "Matched"
+    echo "-------"
+    if [[ ${#matches_list[@]} -eq 0 ]]; then
+	echo "  (none)"
+    else
+	# Print unique matched entries grouped by model; but user asked "model and device name printed" for matched
+	# We'll print each match line: "<Model> /dev/<NAME>"
+	# If the model in matches entry is empty (shouldn't happen because models come from file), we skip printing empty.
+	# Keep order: as discovered.
+	for entry in "${matches_list[@]}"; do
+            IFS='|' read -r m name devpath devmodel <<< "$entry"
+            # For matched we print: "<m> <devpath>" and optionally show device model in parentheses if different
+            if [[ -n "$devmodel" ]]; then
+		printf '%s | %s\n' "$devpath" "$m" 
+            else
+		# no device MODEL, print the NAME instead
+		printf '%s | %s\n' "$devpath" "$m" 
+            fi
+	done
+    fi
+    echo
+
+    # Unmatched list header
+    echo "Unmatched"
+    echo "---------"
+    if [[ ${#device_unmatched_list[@]} -eq 0 ]]; then
+	echo "(none)"
+    else
+	# Print each unmatched device as: "<device_MODEL_or_NAME> /dev/<NAME>"
+	for entry in "${device_unmatched_list[@]}"; do
+            IFS='|' read -r dev_display name <<< "$entry"
+            printf '/dev/%s | %s \n' "$name" "$dev_display" 
+	done
+    fi
+    echo
+
+    echo
+    echo "Devices scanned: ${#devices[@]}"
+    echo "Matches found: ${#matches_list[@]}"
+    echo "Done."
+    
 else
-    # Print each unmatched device as: "<device_MODEL_or_NAME> /dev/<NAME>"
-    for entry in "${device_unmatched_list[@]}"; do
-        IFS='|' read -r dev_display name <<< "$entry"
-        printf '/dev/%s | %s \n' "$name" "$dev_display" 
-    done
+
+    outData='DEVICES=(\n'
+    if [[ ${#matches_list[@]} -eq 0 ]]; then
+	outData=$'DEVICES=(\n(none)\n'
+    else
+	for entry in "${matches_list[@]}"; do
+            IFS='|' read -r m name devpath devmodel <<< "$entry"
+            # For matched we print: "<m> <devpath>" and optionally show device model in parentheses if different
+	    outData+="   \"${devpath}\"\n"
+	done
+	outData+=')'
+    fi
+
+
+
+    if [[ "$UPDATECONFIG" -eq 1 ]]; then
+	echo "--Updating $CONFIG_FILE--";
+
+
+	# Sanity checks
+	if [[ -z "$CONFIG_FILE" ]]; then
+            echo "ERROR: CONFIG_FILE is empty. Aborting." >&2
+            exit 1
+	fi
+	if [[ ! -f "$CONFIG_FILE" ]]; then
+            echo "ERROR: CONFIG_FILE '$CONFIG_FILE' does not exist. Aborting." >&2
+            exit 1
+	fi
+	if [[ -z "$outData" ]]; then
+            echo "ERROR: outData is empty. Aborting." >&2
+            exit 1
+	fi
+
+	# Normalize trailing newline in outData
+	[[ "${outData: -1}" != $'\n' ]] && outData+=$'\n'
+
+	# Backup
+	BACKUP="${CONFIG_FILE}.bak.$(date +%F-%H%M%S)"
+	cp -a -- "$CONFIG_FILE" "$BACKUP" || {
+            echo "ERROR: Failed to create backup at $BACKUP" >&2
+            exit 1
+	}
+
+	
+# Replace DEVICES block using awk (rename state var to avoid 'in' clash)
+    tmp_cfg="$(mktemp)"
+    awk -v block="$outData" '
+      BEGIN { inblk=0; replaced=0 }
+      # Start of DEVICES block
+      /^DEVICES=\(/ {
+        printf "%s", block
+        inblk=1
+        replaced=1
+        next
+      }
+      # Closing line of the DEVICES block: a lone ")" (allow whitespace)
+      inblk && /^[[:space:]]*\)[[:space:]]*$/ {
+        inblk=0
+        next
+      }
+      # Skip all lines inside the old DEVICES block
+      inblk { next }
+      # Otherwise print unchanged
+      { print }
+      END {
+        # If no DEVICES block was found, append ours at EOF
+        if (!replaced) {
+          print ""
+          printf "%s", block
+        }
+      }
+    ' "$CONFIG_FILE" > "$tmp_cfg" || {
+        echo "ERROR: awk replacement failed." >&2
+        rm -f "$tmp_cfg"
+        exit 1
+    }
+
+
+	# Move into place
+	mv "$tmp_cfg" "$CONFIG_FILE" || {
+            echo "ERROR: Failed to update $CONFIG_FILE" >&2
+            exit 1
+	}
+
+
+	
+	echo "Updated DEVICES in $CONFIG_FILE. Backup: $BACKUP"
+	
+    else
+	echo -e "$outData"
+    fi
+	      
 fi
-echo
 
 
 # # Models not found
@@ -173,7 +323,4 @@ echo
 #     echo "  '$m' -> '$disp_regex'  (case-insensitive substring match)"
 # done
 
-echo
-echo "Devices scanned: ${#devices[@]}"
-echo "Matches found: ${#matches_list[@]}"
-echo "Done."
+
