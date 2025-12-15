@@ -7,7 +7,7 @@ set -euo pipefail
 
 MODELS_FILE="/etc/default/checkDrives.models"
 CONFIG_FILE="/etc/default/checkDrives.cfg"
-myVERSION="0.2.0"
+myVERSION="0.2.1"
 
 debug=${DEBUG:-0}
 
