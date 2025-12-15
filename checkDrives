@@ -208,28 +208,33 @@ for arg in "${devices_to_process[@]}"; do
   # Percent life remaining (drive-specific mapping)
   if [[ "$DevModel" == *"KINGSTON SEDC600M1920G"* ]]; then
 #      echo "Kingston "
-    RemainingPercent="$(printf '%s\n' "$data" | grep -E '231' | awk '{print $NF}' || true)"
+      RemainingPercent="$(printf '%s\n' "$data" | grep -E '^231' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"INTEL SSDPEKNW010T8"* ]]; then
-#      echo "Intel"
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F 'Available Spare:' | awk '{print $NF}' || true)"
+      #      echo "Intel"
+      RemainingPercent="$(printf '%s\n' "$data" | grep -F 'Available Spare:' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"Samsung SSD 980 PRO"* ]]; then
-#      echo "Samsung"
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F 'Available Spare:' | awk '{print $NF}' || true)"
+      #      echo "Samsung"
+      RemainingPercent="$(printf '%s\n' "$data" | grep -F 'Available Spare:' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"SSDSC2KG240G8R"* ]]; then
-#      echo "SSD"
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
+      #      echo "SSD"
+      RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
   elif [[ "$DevModel" == *"MTFDDAK480TDS"* ]]; then
-#      echo "MTF"
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
+      #      echo "MTF"
+      RemainingPercent="$(printf '%s\n' "$data" | grep -F '245 Percent_Life_Remaining ' | awk '{print $NF}' || true)"
+      
+
+      if [[ -z "$RemainingPercent" ]]; then
+	  RemainingPercent="$(printf '%s\n' "$data" | grep -F '233 Media_Wearout_Indicator' | awk '{print $4}' || true )"
+      fi
   elif [[ "$DevModel" == *"WDS100T2B0A"* || "$DevModel" == *"WDS240G2G0A"* || "$DevModel" == *"WDS480G2G0A"*  || "$DevModel" == *"WDS500G1R0A" || "$DevModel" == *"WDS100T1R0A" ]]; then
       #      echo "WDC"
       ## These device has also '230 Media_Wearout_Indicator' that could be used. But then use $4
       #RemainingPercent="$(printf '%s\n' "$data" | grep -F '230 Media_Wearout_Indicator' | awk '{print $4}'
-    RemainingPercent="$(printf '%s\n' "$data" | grep -F '232 Available_Reservd_Space ' | awk '{print $NF}' || true)"
+      RemainingPercent="$(printf '%s\n' "$data" | grep -F '232 Available_Reservd_Space ' | awk '{print $NF}' || true)"
   else
       
-    echo "Unknown model, $DevModel"
-    RemainingPercent="00"
+      echo "Unknown model, $DevModel"
+      RemainingPercent="00"
   fi
 
   # Normalize fields for line protocol
