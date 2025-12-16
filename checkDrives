@@ -25,7 +25,7 @@ EOF
 }
 
 show_version() {
-    myVERSION="0.2.1"
+    myVERSION="0.2.2"
     echo "$0 version $myVERSION"
 }
 
